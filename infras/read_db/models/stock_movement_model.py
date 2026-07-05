@@ -22,22 +22,23 @@ class BatchInfo(BaseModel):
 
 
 class StockMovementProduct(BaseModel):
-    inventory_id: str
+    product_id: str
     ui_id: str
     name: str
-    
-    category_name: Optional[str] = None
-    unit_name: Optional[str] = None
-    
-    stocks_before: float = 0
-    stocks_adjusted: float = 0
-    stocks_after: float = 0
+    category_infos:dict={}
+    unit_infos:dict={}
+
+    stock_infos:dict={
+        "stocks_before": 0.0,
+        "stocks": 0.0,
+        "stocks_after": 0.0
+    }
     
     type: str # INCREMENT or DECREMENT
 
-    variant: Optional[VariantInfo] = None
-    batch: Optional[BatchInfo] = None
-    serial_info: Optional[SerialInfo] = None
+    variant_infos: Optional[VariantInfo] = None
+    batch_infos: Optional[BatchInfo] = None
+    serial_numbers: Optional[List[str]] = None
 
 
 
@@ -50,8 +51,7 @@ class StockMovementReadModel(BaseModel):
     adjusted_date: datetime
     description: str
     
-    total_items: int = 0
-    total_quantity: float = 0
+    item_infos:dict={}
 
     products: List[StockMovementProduct] = []
 

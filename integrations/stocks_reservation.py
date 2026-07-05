@@ -49,8 +49,10 @@ async def create_reservation(data:CartReserveRequest):
             "batch_id": data.batch_id,
             "shop_id": data.shop_id,
             "qty": data.qty,
-            "serialno_infos":data.serialno_infos,
-            "expires_at": expires_at.isoformat()
+            "serialno_infos": [
+                s.model_dump(mode="json") for s in data.serialno_infos
+            ] if data.serialno_infos else [],
+            "expires_at": expires_at.isoformat(),
         }
         
         async with httpx.AsyncClient() as client:

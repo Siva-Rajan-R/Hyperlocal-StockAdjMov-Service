@@ -61,16 +61,20 @@ class EventCreateStockMovAdjItemSchema(BaseModel):
     product_id: str
     name: str
     ui_id: str
+    category_id:str
+    category_name:str
+    unit_id:str
+    unit_name:str
     variant_id: Optional[str] = None
     variant_name: Optional[str] = None
     batch_id: Optional[str] = None
     batch_name: Optional[str] = None
     mfg_date: Optional[datetime] = None
     exp_date: Optional[datetime] = None
-    serial_numbers: Optional[List[dict]] = None
+    serial_numbers: Optional[List[str]] = None
     type: StockMovAdjItemTypeEnums
     stocks_before: float
-    stocks_adjusted: float
+    stocks: float
     stocks_after: float
 
 class EventCreateStockMovAdjSchema(BaseModel):

@@ -12,7 +12,6 @@ async def worker():
     exchanges=[
         {'name':'stockmovadj.service.exchange','exc_type':ExchangeType.DIRECT},
         {'name':'stockmovadj.producer.exchange','exc_type':ExchangeType.DIRECT},
-        {'name':'hyperlocal_domain_events','exc_type':ExchangeType.DIRECT}
     ]
 
     for exchange in exchanges:
@@ -22,7 +21,7 @@ async def worker():
     queues=[
         {'exc_name':'stockmovadj.service.exchange','q_name':'stockmovadj.service.queue','r_key':'stockmovadj.service.routing.key'},
         {'exc_name':'stockmovadj.producer.exchange','q_name':'stockmovadj.producer.queue','r_key':'stockmovadj.producer.routing.key'},
-        {'exc_name':'hyperlocal_domain_events','q_name':'supplier_service_shopconfig_q','r_key':'hyperlocal.shopconfig.updated'}
+
     ]
 
     for queue in queues:

@@ -11,6 +11,7 @@ from messaging.saga_producer import SagaProducer,CreateSagaStateSchema,SagaStatu
 from hyperlocal_platform.core.enums.saga_state_enum import SagaStepsValueEnum
 from hyperlocal_platform.core.utils.uuid_generator import generate_uuid
 from hyperlocal_platform.core.utils.routingkey_builder import generate_routingkey,RoutingkeyState,RoutingkeyActions,RoutingkeyVersions
+from infras.read_db.repos.stock_movement_repo import StockMovementReadDbRepo
 
 
 class HandleStockMovAdjRequest:
@@ -112,7 +113,8 @@ class HandleStockMovAdjRequest:
     
 
     async def get_stock_movements(self,data:GetAllStockMovAdjSchemas):
-        res=await self.stock_mov_adj_service_obj.get_movements(data=data)
+        # res=await self.stock_mov_adj_service_obj.get_movements(data=data)
+        res=await StockMovementReadDbRepo.get_all(data=data)
         ic(res)
         return SuccessResponseTypDict(
             detail=BaseResponseTypDict(
@@ -124,7 +126,8 @@ class HandleStockMovAdjRequest:
         )
     
     async def get_stock_movements_by_shop_id(self,data:GetStockMovAdjByShopIdSchema):
-        res=await self.stock_mov_adj_service_obj.get_movements_by_shop_id(data=data)
+        # res=await self.stock_mov_adj_service_obj.get_movements_by_shop_id(data=data)
+        res=await StockMovementReadDbRepo.get_by_shop_id(data=data)
         ic(res)
         return SuccessResponseTypDict(
             detail=BaseResponseTypDict(
@@ -134,8 +137,11 @@ class HandleStockMovAdjRequest:
             ),
             data=res
         )
+    
+
     async def get_stock_movements_by_id(self,data:GetStockMovAdjByIdSchema):
-        res=await self.stock_mov_adj_service_obj.get_movement_by_id(data=data)
+        # res=await self.stock_mov_adj_service_obj.get_movement_by_id(data=data)
+        res=await StockMovementReadDbRepo.get_by_id(data=data)
         ic(res)
         return SuccessResponseTypDict(
             detail=BaseResponseTypDict(

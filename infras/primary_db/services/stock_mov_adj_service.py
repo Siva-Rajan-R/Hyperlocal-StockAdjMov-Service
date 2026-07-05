@@ -63,7 +63,8 @@ class StockMovAdjService:
                         "batch_id":item['batch_id'],
                         "stocks":item['qty'],
                         "serialno_infos":item['serialno_infos'],
-                        "type":"INCREMENT"
+                        "type":"INCREMENT",
+                        'entity_name':'ADJUSTMENT'
                     }
                 )
             elif item['type']=="DECREMENT":
@@ -101,8 +102,8 @@ class StockMovAdjService:
                     "body":body
                 }
             )
+            
         elif product_ids:
-
             await SagaProducer.emit(
                 saga_payload=CreateSagaStateSchema(
                     id=saga_id,
@@ -112,7 +113,7 @@ class StockMovAdjService:
                         "FETCHING_PRODUCTS":SagaStepsValueEnum.PENDING
                     },
                     execution=SagaStateExecutionTypDict(
-                        step="FETCHING_PPRODUCTS",
+                        step="FETCHING_PRODUCTS",
                         service="PRODUCTS"
                     ),
                     data=saga_data
