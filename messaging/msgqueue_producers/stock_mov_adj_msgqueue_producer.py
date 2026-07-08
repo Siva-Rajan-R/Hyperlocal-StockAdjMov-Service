@@ -293,6 +293,37 @@ class MessagingQueueStockMovAdjProducer:
                     products=stockmovadj_read_items
                 )
                 await StockMovementReadDbRepo.add_updatereaddb(read_model)
+                
+                try:
+                    analytics_payload = {
+                        "shop_id": shop_id,
+                        "datas": [
+                            {
+                                "product_id": item['product_id'],
+                                "variant_id": item.get('variant_id'),
+                                "batch_id": item.get('batch_id') or item.get('batch_infos', {}).get('id'),
+                                "stocks": float(item.get('qty', 0)),
+                                "type": item['type']
+                            }
+                            for item in stockmoveadj_items
+                        ]
+                    }
+                    await rabbitmq_connection.publish_event(
+                        routing_key="analytics.service.routing.key",
+                        exchange_name="analytics.service.exchange",
+                        payload=analytics_payload,
+                        headers={
+                            "entity_name": "stockmovadj_event",
+                            "service_name": "ANALYTICS",
+                            "saga_id": "none",
+                            "reply_key": "none",
+                            "reply_exchange": "none",
+                            "reply_entity_name": "none",
+                            "body": analytics_payload
+                        }
+                    )
+                except Exception as e:
+                    ic(f"Failed to publish analytics event: {e}")
 
             return {
                 "success": True,
