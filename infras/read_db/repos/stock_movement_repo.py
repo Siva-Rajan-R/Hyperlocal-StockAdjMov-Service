@@ -1,7 +1,7 @@
 from ..main import STOCK_MOVEMENT_COLLECTION
 from ..models.stock_movement_model import StockMovementReadModel
 from icecream import ic
-from schemas.v1.stock_mov_adj_schemas.request_schema import GetAllStockMovAdjSchemas,GetStockAdjByInventoryIdSchema,GetStockMovAdjByIdSchema,GetStockMovAdjByShopIdSchema
+from schemas.v1.stock_mov_adj_schemas.request_schema import GetAllStockMovAdjSchemas,GetStockAdjByInventoryIdSchema,GetStockMovAdjByIdSchema,GetStockMovAdjByShopIdSchema,GetStockMovAdjByProductIdSchema
 from typing import List,Optional,Dict
 
 class StockMovementReadDbRepo:
@@ -90,3 +90,21 @@ class StockMovementReadDbRepo:
         except Exception as e:
             ic(f"Error in get_by_id: {e}")
             return None
+
+    @staticmethod
+    async def get_by_product_id(
+        data: GetStockMovAdjByProductIdSchema
+    ) -> List[dict]:
+        try:
+            query = {
+                "shop_id": data.shop_id,
+                "products.product_id": data.product_id
+            }
+            cursor = STOCK_MOVEMENT_COLLECTION.find(
+                query,
+                {"_id": 0}
+            ).skip((data.offset - 1) * data.limit).limit(data.limit)
+            return await cursor.to_list(length=None)
+        except Exception as e:
+            ic(f"Error in get_by_product_id: {e}")
+            return []

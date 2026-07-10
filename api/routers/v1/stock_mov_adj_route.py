@@ -3,7 +3,7 @@ from ...handlers.stock_mov_adj_handler import HandleStockMovAdjRequest
 from fastapi import APIRouter,Query,Depends
 from infras.primary_db.main import AsyncSession,get_pg_async_session
 from typing import Optional,Annotated,List
-from schemas.v1.stock_mov_adj_schemas.request_schema import CreateStockMovAdjSchema,DeleteStockMovAdjSchema,GetStockMovAdjByIdSchema,GetAllStockMovAdjSchemas,GetStockMovAdjByShopIdSchema
+from schemas.v1.stock_mov_adj_schemas.request_schema import CreateStockMovAdjSchema,DeleteStockMovAdjSchema,GetStockMovAdjByIdSchema,GetAllStockMovAdjSchemas,GetStockMovAdjByShopIdSchema,GetStockMovAdjByProductIdSchema
 
 
 router=APIRouter(
@@ -38,3 +38,7 @@ async def search(session:ASYNC_PG_SESSION, data:GetStockMovAdjByShopIdSchema=Dep
 @router.get("/by/id/{shop_id}/{id}")
 async def get_supplier_stats(session:ASYNC_PG_SESSION,data:GetStockMovAdjByIdSchema=Depends()):
     return await HandleStockMovAdjRequest(session=session).get_stock_movements_by_id(data=data)
+
+@router.get("/by/product/{shop_id}/{product_id}")
+async def get_by_product(session:ASYNC_PG_SESSION, data:GetStockMovAdjByProductIdSchema=Depends()):
+    return await HandleStockMovAdjRequest(session=session).get_stock_movements_by_product_id(data=data)

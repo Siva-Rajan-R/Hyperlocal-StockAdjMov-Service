@@ -55,6 +55,12 @@ class GetStockAdjByInventoryIdSchema(BaseModel):
     shop_id: str
     inventory_id: str
 
+class GetStockMovAdjByProductIdSchema(BaseModel):
+    limit:int=10
+    offset:int=1
+    shop_id:str
+    product_id:str
+
 from datetime import datetime
 
 class EventCreateStockMovAdjItemSchema(BaseModel):

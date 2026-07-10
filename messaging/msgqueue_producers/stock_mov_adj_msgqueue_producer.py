@@ -109,7 +109,7 @@ class MessagingQueueStockMovAdjProducer:
 
             async with AsyncInventoryLocalSession() as session:
                 repo = repo = StockMovAdjRepo(session)
-                fetched_products_data = datas.get('products', {})
+                fetched_products_data = datas.get('products') or []
                 for prod_db in fetched_products_data:
                     ic(prod_db)
                     product_id = prod_db['id']

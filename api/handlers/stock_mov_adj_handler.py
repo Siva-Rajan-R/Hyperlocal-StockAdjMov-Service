@@ -6,7 +6,7 @@ from hyperlocal_platform.core.models.req_res_models import SuccessResponseTypDic
 from icecream import ic
 from fastapi.exceptions import HTTPException
 from core.utils.validate_fields import convert_field_type,validate_fields
-from schemas.v1.stock_mov_adj_schemas.request_schema import CreateStockMovAdjSchema,GetAllStockMovAdjSchemas,GetStockMovAdjByIdSchema,GetStockMovAdjByShopIdSchema,DeleteStockMovAdjSchema
+from schemas.v1.stock_mov_adj_schemas.request_schema import CreateStockMovAdjSchema,GetAllStockMovAdjSchemas,GetStockMovAdjByIdSchema,GetStockMovAdjByShopIdSchema,DeleteStockMovAdjSchema,GetStockMovAdjByProductIdSchema
 from messaging.saga_producer import SagaProducer,CreateSagaStateSchema,SagaStatusEnum,SagaStateExecutionTypDict
 from hyperlocal_platform.core.enums.saga_state_enum import SagaStepsValueEnum
 from hyperlocal_platform.core.utils.uuid_generator import generate_uuid
@@ -142,6 +142,18 @@ class HandleStockMovAdjRequest:
     async def get_stock_movements_by_id(self,data:GetStockMovAdjByIdSchema):
         # res=await self.stock_mov_adj_service_obj.get_movement_by_id(data=data)
         res=await StockMovementReadDbRepo.get_by_id(data=data)
+        ic(res)
+        return SuccessResponseTypDict(
+            detail=BaseResponseTypDict(
+                status_code=200,
+                success=True,
+                msg="Stock Movements fetched successfully"
+            ),
+            data=res
+        )
+
+    async def get_stock_movements_by_product_id(self,data:GetStockMovAdjByProductIdSchema):
+        res=await StockMovementReadDbRepo.get_by_product_id(data=data)
         ic(res)
         return SuccessResponseTypDict(
             detail=BaseResponseTypDict(
