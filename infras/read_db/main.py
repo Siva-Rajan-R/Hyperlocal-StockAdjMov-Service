@@ -25,6 +25,9 @@ MONGO_CLIENT=AsyncIOMotorClient(SETTINGS.READ_DB_URL)
 DB=MONGO_CLIENT["StockMovAdjServiceReadDb"]
 
 STOCK_MOVEMENT_COLLECTION=DB['StockMovAdjCollections']
+PURCHAESE_COLLECTION=DB['PurchaseCollections']
+PURCHASE_STATS_COLLECTION=DB['PurchaseStatsCollections']
+SUPPLIER_STATS_COLLECTION=DB['SupplierStatsCollections']
 
 
 
