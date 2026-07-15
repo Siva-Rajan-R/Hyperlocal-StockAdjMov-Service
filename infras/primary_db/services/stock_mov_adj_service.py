@@ -60,7 +60,7 @@ class StockMovAdjService:
                         "shop_id":data.shop_id,
                         "product_id":item['product_id'],
                         "variant_id":item['variant_id'],
-                        "batch_id":item['batch_id'],
+                        "batch_infos":{"id":item['batch_id']},
                         "stocks":item['qty'],
                         "serialno_infos":item['serialno_infos'],
                         "type":"INCREMENT",

@@ -4,7 +4,7 @@ from typing import Optional,List
 
 
 class CartSerialNoInfos(BaseModel):
-    id:str
+    id:Optional[str]=None
     name:str
 
 class CartReserveRequest(BaseModel):

@@ -43,7 +43,7 @@ class StockMovementReadDbRepo:
             cursor = STOCK_MOVEMENT_COLLECTION.find(
                 query,
                 {"_id": 0}
-            )
+            ).sort("created_at", -1)
 
             return await cursor.to_list(length=None)
 
@@ -64,7 +64,7 @@ class StockMovementReadDbRepo:
             cursor = STOCK_MOVEMENT_COLLECTION.find(
                 query,
                 {"_id": 0}
-            )
+            ).sort("created_at", -1)
 
             return await cursor.to_list(length=None)
 
@@ -103,7 +103,7 @@ class StockMovementReadDbRepo:
             cursor = STOCK_MOVEMENT_COLLECTION.find(
                 query,
                 {"_id": 0}
-            ).skip((data.offset - 1) * data.limit).limit(data.limit)
+            ).sort("created_at", -1).skip((data.offset - 1) * data.limit).limit(data.limit)
             return await cursor.to_list(length=None)
         except Exception as e:
             ic(f"Error in get_by_product_id: {e}")

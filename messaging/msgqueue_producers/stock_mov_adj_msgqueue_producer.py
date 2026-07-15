@@ -196,16 +196,16 @@ class MessagingQueueStockMovAdjProducer:
                         stocks = float(itm.get('qty', 0))
                         current_db_physical = float(stock_infos.get('physical_stocks', 0))
                         
+                        # stock_before = physical stock BEFORE this adjustment
+                        # stock_after  = physical stock AFTER this adjustment
                         if inc_decr_type=="INCREMENT":
-                            stock_before = current_db_physical - stocks
-                            if stock_before<0:
-                                stock_before=0
+                            stock_before = current_db_physical
                             ic(stock_before, current_db_physical, stocks)
-                            stock_after = current_db_physical
+                            stock_after = current_db_physical + stocks
                         elif inc_decr_type=="DECREMENT":
-                            stock_before = current_db_physical + stocks
+                            stock_before = current_db_physical
                             ic(stock_before, current_db_physical, stocks)
-                            stock_after = current_db_physical
+                            stock_after = max(0.0, current_db_physical - stocks)
 
                         # Update transaction metadata
                         item_infos['total_adjustment_items'] += 1
