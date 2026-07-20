@@ -12,7 +12,8 @@ from schemas.v1.stock_mov_adj_cart_schemas.request_schemas import CartCancelRequ
 from icecream import ic
 
 
-BASE_URL="http://127.0.0.1:8004/inventories/inventories"
+# BASE_URL="http://127.0.0.1:8004/inventories/inventories"
+BASE_URL="http://inventory-service:8000/inventories/inventories"
 TTL_MINUTES = 3
 
 async def create_reservation(data:CartReserveRequest):
