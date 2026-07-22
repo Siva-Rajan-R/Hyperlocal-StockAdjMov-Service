@@ -38,7 +38,32 @@ class StockMovementReadDbRepo:
         data:GetAllStockMovAdjSchemas
     ) -> List[dict]:
         try:
+            from datetime import datetime
             query = {}
+
+            if getattr(data, 'query', None):
+                query["$or"] = [
+                    {"ui_id": {"$regex": data.query, "$options": "i"}},
+                    {"stock_movement_id": {"$regex": data.query, "$options": "i"}},
+                    {"movement_type": {"$regex": data.query, "$options": "i"}},
+                    {"description": {"$regex": data.query, "$options": "i"}}
+                ]
+            if getattr(data, 'from_date', None):
+                try:
+                    from_dt = datetime.strptime(data.from_date, "%Y-%m-%d")
+                    if "created_at" not in query: query["created_at"] = {}
+                    query["created_at"]["$gte"] = from_dt
+                except Exception:
+                    pass
+            if getattr(data, 'to_date', None):
+                try:
+                    to_date_str = data.to_date
+                    if len(to_date_str) <= 10: to_date_str += ' 23:59:59'
+                    to_dt = datetime.strptime(to_date_str, "%Y-%m-%d %H:%M:%S")
+                    if "created_at" not in query: query["created_at"] = {}
+                    query["created_at"]["$lte"] = to_dt
+                except Exception:
+                    pass
 
             cursor = STOCK_MOVEMENT_COLLECTION.find(
                 query,
@@ -56,10 +81,34 @@ class StockMovementReadDbRepo:
         data:GetStockMovAdjByShopIdSchema
     ) -> List[dict]:
         try:
+            from datetime import datetime
             query = {
                 "shop_id": data.shop_id
             }
 
+            if getattr(data, 'query', None):
+                query["$or"] = [
+                    {"ui_id": {"$regex": data.query, "$options": "i"}},
+                    {"stock_movement_id": {"$regex": data.query, "$options": "i"}},
+                    {"movement_type": {"$regex": data.query, "$options": "i"}},
+                    {"description": {"$regex": data.query, "$options": "i"}}
+                ]
+            if getattr(data, 'from_date', None):
+                try:
+                    from_dt = datetime.strptime(data.from_date, "%Y-%m-%d")
+                    if "created_at" not in query: query["created_at"] = {}
+                    query["created_at"]["$gte"] = from_dt
+                except Exception:
+                    pass
+            if getattr(data, 'to_date', None):
+                try:
+                    to_date_str = data.to_date
+                    if len(to_date_str) <= 10: to_date_str += ' 23:59:59'
+                    to_dt = datetime.strptime(to_date_str, "%Y-%m-%d %H:%M:%S")
+                    if "created_at" not in query: query["created_at"] = {}
+                    query["created_at"]["$lte"] = to_dt
+                except Exception:
+                    pass
 
             cursor = STOCK_MOVEMENT_COLLECTION.find(
                 query,

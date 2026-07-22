@@ -144,6 +144,7 @@ class StockMovAdjService:
         res=await self.stock_mov_adj_obj.delete_adjustment(data=data)
         if res:
             try:
+                adj_name = f"Stock Adjustment #{data.id[:8]}"
                 from messaging.main import RabbitMQMessagingConfig
                 rabbitmq_msg_obj = RabbitMQMessagingConfig()
                 await rabbitmq_msg_obj.publish_event(
@@ -151,13 +152,14 @@ class StockMovAdjService:
                     exchange_name="activity_logs.exchange",
                     payload={
                         "shop_id": data.shop_id,
-                        "user_name": "siva",
+                        "user_name": "Hyperlocal-User",
                         "service": "StockAdjustment",
-                        "action": "DELETE",
-                        "entity_type": "StockAdjustment",
-                        "entity_id": data.id,
-                        "description": f"Deleted stock adjustment {data.id}",
-                        "changes": [{"field": "id", "before": str(data.id), "after": "DELETED"}]
+                        "action": "DELETED",
+                        "entity_type": "STOCK_ADJUSTMENT",
+                        "entity_id": str(data.id),
+                        "entity_name": str(adj_name),
+                        "description": f"Deleted Stock Adjustment {adj_name} ({data.id})",
+                        "changes": []
                     },
                     headers={}
                 )

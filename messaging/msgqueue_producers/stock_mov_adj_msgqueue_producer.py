@@ -297,16 +297,9 @@ class MessagingQueueStockMovAdjProducer:
                 try:
                     analytics_payload = {
                         "shop_id": shop_id,
-                        "datas": [
-                            {
-                                "product_id": item['product_id'],
-                                "variant_id": item.get('variant_id'),
-                                "batch_id": item.get('batch_id') or item.get('batch_infos', {}).get('id'),
-                                "stocks": float(item.get('qty', 0)),
-                                "type": item['type']
-                            }
-                            for item in stockmoveadj_items
-                        ]
+                        "entity_name": "STOCK_MOVEMENT",
+                        "entity_id": str(stockmoveadj_id),
+                        "action": "CREATE"
                     }
                     await rabbitmq_connection.publish_event(
                         routing_key="analytics.service.routing.key",
