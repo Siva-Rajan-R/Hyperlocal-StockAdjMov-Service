@@ -72,11 +72,6 @@ class MessagingQueueStockMovAdjProducer:
 
 
         if current_step == "FETCHING_PRODUCTS":
-            
-            stock_mov_adj_id = generate_uuid()
-            ui_id_res = await get_ui_id(shop_id=stock_mov_adj_data['shop_id'])
-            ui_id = f"{ui_id_res.get('prefix')}-{ui_id_res.get('current_number')}"
-            
             # Resolve and parse dates early to share across primary and read DB blocks
             date_val = stock_mov_adj_data.get('date')
             if isinstance(date_val, str):
@@ -104,11 +99,12 @@ class MessagingQueueStockMovAdjProducer:
                     validated_payload_map[p_id] = []
                 validated_payload_map[p_id].append(stockmovadj)
 
-            stockmovadj_read_items = []
+            stock_mov_adj_models = []
             stockmovadj_items_toadd = []
+            read_models = []
 
             async with AsyncInventoryLocalSession() as session:
-                repo = repo = StockMovAdjRepo(session)
+                repo = StockMovAdjRepo(session)
                 fetched_products_data = datas.get('products') or []
                 for prod_db in fetched_products_data:
                     ic(prod_db)
@@ -120,19 +116,16 @@ class MessagingQueueStockMovAdjProducer:
                     has_variant = type_infos.get('has_variant', False)
                     has_batch = type_infos.get('has_batch', False)
                     has_serialno = type_infos.get('has_serialno', False)
-                    category_infos=prod_db.get('category_infos',{})
-                    unit_infos=prod_db.get("unit_infos",{})
-                    gst = prod_db.get('gst', '0%')
 
-                    category_infos=prod_db.get('category_infos') or {}
-                    unit_infos=prod_db.get('unit_infos') or {}
+                    category_infos = prod_db.get('category_infos') or {}
+                    unit_infos = prod_db.get('unit_infos') or {}
 
                     incoming_item_matches = validated_payload_map.get(product_id) or []
                     
                     for itm in incoming_item_matches:
                         variant_id = itm.get('variant_id')
                         batch_infos_payload = itm.get('batch_infos') or {}
-                        inc_decr_type=itm['type']
+                        inc_decr_type = itm['type']
                         # Match batch by ID directly from itm or payload fallback
                         batch_id = itm.get('batch_id') or batch_infos_payload.get('id')
                         batch_target_name = batch_infos_payload.get('name')
@@ -193,50 +186,59 @@ class MessagingQueueStockMovAdjProducer:
                                 pricing_infos = prod_db.get('pricing_infos') or {}
 
                         # Compute Safe Inventory Delta Strategy metrics
-                        stocks = float(itm.get('qty', 0))
+                        stocks = float(itm.get('qty', 0) or itm.get('stocks', 0))
                         current_db_physical = float(stock_infos.get('physical_stocks', 0))
                         
-                        # stock_before = physical stock BEFORE this adjustment
-                        # stock_after  = physical stock AFTER this adjustment
-                        if inc_decr_type=="INCREMENT":
-                            stock_before = current_db_physical
-                            ic(stock_before, current_db_physical, stocks)
-                            stock_after = current_db_physical + stocks
-                        elif inc_decr_type=="DECREMENT":
-                            stock_before = current_db_physical
-                            ic(stock_before, current_db_physical, stocks)
-                            stock_after = max(0.0, current_db_physical - stocks)
+                        if itm.get('stocks_before') is not None and itm.get('stocks_after') is not None:
+                            stock_before = float(itm['stocks_before'])
+                            stock_after = float(itm['stocks_after'])
+                        else:
+                            if inc_decr_type == "INCREMENT":
+                                stock_before = max(0.0, current_db_physical - stocks)
+                                stock_after = current_db_physical
+                            else:
+                                stock_before = current_db_physical + stocks
+                                stock_after = current_db_physical
 
-                        # Update transaction metadata
-                        item_infos['total_adjustment_items'] += 1
-                        
-                        if inc_decr_type=="INCREMENT":
-                            item_infos['total_adjustment_increment_stocks'] += stocks
-                        elif inc_decr_type=="DECREMENT":
-                            item_infos['total_adjustment_decrement_stocks'] += stocks
+                        item_stock_mov_adj_id = generate_uuid()
+                        item_ui_id_res = await get_ui_id(shop_id=stock_mov_adj_data['shop_id'])
+                        item_ui_id = f"{item_ui_id_res.get('prefix')}-{item_ui_id_res.get('current_number')}" if isinstance(item_ui_id_res, dict) else f"STM-{generate_uuid()[:6].upper()}"
+
+                        stock_mov_adj_models.append(
+                            StockMovementAdjustment(
+                                id=item_stock_mov_adj_id,
+                                ui_id=item_ui_id,
+                                shop_id=shop_id,
+                                type=inc_decr_type,
+                                description=description,
+                                additional_infos={}
+                            )
+                        )
 
                         stockmovadj_item_id = generate_uuid()  
-                        stockmovadj_items_toadd.append(StockMovAdjItems(
-                            id=stockmovadj_item_id,
-                            stock_move_adj_id=stock_mov_adj_id,
-                            product_id=product_id,
-                            variant_id=variant_id,
-                            batch_id=batch_id,
-                            serial_numbers=payload_serialno_infos,
-                            type=inc_decr_type,
-                            stocks=stocks,
-                            stocks_before=stock_before,
-                            stocks_after=stock_after
-                        ))
+                        stockmovadj_items_toadd.append(
+                            StockMovAdjItems(
+                                id=stockmovadj_item_id,
+                                stock_move_adj_id=item_stock_mov_adj_id,
+                                product_id=product_id,
+                                variant_id=variant_id,
+                                batch_id=batch_id,
+                                serial_numbers=payload_serialno_infos,
+                                type=inc_decr_type,
+                                stocks=stocks,
+                                stocks_before=stock_before,
+                                stocks_after=stock_after
+                            )
+                        )
 
-                        read_db_variant_infos=None
+                        read_db_variant_infos = None
                         if variant_id:
                             read_db_variant_infos = VariantInfo(
                                 variant_id=variant_id,
                                 variant_name=variant_name or 'Unknown'
                             )
 
-                        read_db_batch_infos=None
+                        read_db_batch_infos = None
                         if batch_infos:
                             read_db_batch_infos = BatchInfo(
                                 batch_id=batch_infos.get('id'),
@@ -245,60 +247,59 @@ class MessagingQueueStockMovAdjProducer:
                                 exp_date=batch_infos.get('expiry_date')
                             )
 
-                        stockmovadj_read_items.append(
-                            StockMovementProduct(
-                                product_id=product_id,
-                                ui_id=db_ui_id,
-                                name=product_name,
-                                category_infos=category_infos,
-                                unit_infos=unit_infos,
-                                variant_infos=read_db_variant_infos,
-                                batch_infos=read_db_batch_infos,
-                                stock_infos={
-                                    'stocks':stocks,
-                                    'stocks_before':stock_before,
-                                    'stocks_after':stock_after
-                                },
-                                type=inc_decr_type,
-                                serial_numbers=[s.get('name', s) if isinstance(s, dict) else s for s in payload_serialno_infos]
+                        single_item_read_model = StockMovementProduct(
+                            product_id=product_id,
+                            ui_id=db_ui_id,
+                            name=product_name,
+                            category_infos=category_infos,
+                            unit_infos=unit_infos,
+                            variant_infos=read_db_variant_infos,
+                            batch_infos=read_db_batch_infos,
+                            stock_infos={
+                                'stocks': stocks,
+                                'stocks_before': stock_before,
+                                'stocks_after': stock_after
+                            },
+                            type=inc_decr_type,
+                            serial_numbers=[s.get('name', s) if isinstance(s, dict) else s for s in payload_serialno_infos]
+                        )
+
+                        adjjusted_date = date_val
+                        if isinstance(adjjusted_date, str):
+                            adjjusted_date = datetime.datetime.strptime(adjjusted_date, "%Y-%m-%d").date()
+
+                        single_item_infos = {
+                            'total_adjustment_items': 1,
+                            'total_adjustment_increment_stocks': stocks if inc_decr_type == "INCREMENT" else 0,
+                            'total_adjustment_decrement_stocks': stocks if inc_decr_type == "DECREMENT" else 0,
+                        }
+
+                        read_models.append(
+                            StockMovementReadModel(
+                                stock_movement_id=item_stock_mov_adj_id,
+                                ui_id=item_ui_id,
+                                shop_id=shop_id,
+                                movement_type=inc_decr_type,
+                                adjusted_date=adjjusted_date,
+                                description=description,
+                                item_infos=single_item_infos,
+                                products=[single_item_read_model]
                             )
                         )
 
-                adjjusted_date = date_val
-                if isinstance(adjjusted_date, str):
-                    adjjusted_date = datetime.datetime.strptime(adjjusted_date, "%Y-%m-%d").date()
-
-                stock_mov_adj_model = StockMovementAdjustment(
-                    id=stock_mov_adj_id,
-                    ui_id=ui_id,
-                    shop_id=shop_id,
-                    type=adj_type,
-                    description=description,
-                    additional_infos={}
-                )
-
-                await repo.create_bulk_adjustment([stock_mov_adj_model])
+                await repo.create_bulk_adjustment(stock_mov_adj_models)
                 await repo.create_bulk_items(stockmovadj_items_toadd)
                 await session.commit()
 
-                # 2. Read DB Insert
-                read_model = StockMovementReadModel(
-                    stock_movement_id=stock_mov_adj_id,
-                    ui_id=ui_id,
-                    shop_id=shop_id,
-                    movement_type=adj_type,
-                    adjusted_date=adjjusted_date,
-                    description=description,
-                    item_infos=item_infos,
-                    products=stockmovadj_read_items
-                )
-                await StockMovementReadDbRepo.add_updatereaddb(read_model)
+                # 2. Read DB Inserts
+                for rm in read_models:
+                    await StockMovementReadDbRepo.add_updatereaddb(rm)
                 
                 try:
                     analytics_payload = {
                         "shop_id": shop_id,
                         "entity_name": "STOCK_MOVEMENT",
-                        "entity_id": str(stockmoveadj_id),
+                        "entity_id": str(""),
                         "action": "CREATE"
                     }
                     await rabbitmq_connection.publish_event(

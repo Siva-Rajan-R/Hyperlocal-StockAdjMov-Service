@@ -22,9 +22,15 @@ class MessagingQueueStockMovAdjService:
 
         ic("Received EventCreateStockMovAdjSchema:", data)
 
-        stock_mov_adj_id = generate_uuid()
-        ui_id_res = await get_ui_id(shop_id=data.shop_id)
-        ui_id=f"{ui_id_res.get("prefix")}-{ui_id_res.get("current_number")}"
+        # Pre-fetch UI IDs upfront before opening DB transaction block to avoid IO within active transaction
+        ui_ids = []
+        for _ in range(len(data.items)):
+            try:
+                res = await get_ui_id(shop_id=data.shop_id)
+                ui_str = f"{res.get('prefix')}-{res.get('current_number')}" if isinstance(res, dict) else f"STM-{generate_uuid()[:6].upper()}"
+            except Exception:
+                ui_str = f"STM-{generate_uuid()[:6].upper()}"
+            ui_ids.append(ui_str)
 
         # 1. Save to Primary DB
         async with AsyncInventoryLocalSession() as session:
@@ -36,7 +42,6 @@ class MessagingQueueStockMovAdjService:
             elif not date_val:
                 date_val = datetime.datetime.now(datetime.timezone.utc)
 
-            
             shop_id = data.shop_id
             adj_type = data.type.value
             description = data.description
@@ -47,18 +52,28 @@ class MessagingQueueStockMovAdjService:
                 'total_adjustment_decrement_stocks': 0,
             }
 
-
-            stockmovadj_read_items = []
+            stock_mov_adj_models = []
             stockmovadj_items_toadd = []
+            read_models = []
 
-
-            for item in data.items:
+            for idx, item in enumerate(data.items):
                 ic(item)
+                single_stock_mov_adj_id = generate_uuid()
                 item_id = generate_uuid()
+                single_ui_id = ui_ids[idx]
+
+                stock_mov_adj_models.append(StockMovementAdjustment(
+                    id=single_stock_mov_adj_id,
+                    ui_id=single_ui_id,
+                    shop_id=data.shop_id,
+                    type=item.type.value,
+                    description=data.description,
+                    additional_infos={}
+                ))
 
                 stockmovadj_items_toadd.append(StockMovAdjItems(
                     id=item_id,
-                    stock_move_adj_id=stock_mov_adj_id,
+                    stock_move_adj_id=single_stock_mov_adj_id,
                     product_id=item.product_id,
                     variant_id=item.variant_id,
                     batch_id=item.batch_id,
@@ -85,66 +100,71 @@ class MessagingQueueStockMovAdjService:
                         exp_date=item.exp_date
                     )
 
-                stockmovadj_read_items.append(StockMovementProduct(
+                single_product = StockMovementProduct(
                     product_id=item.product_id,
                     ui_id=item.ui_id,
                     name=item.name,
                     stock_infos={
-                        'stocks':item.stocks,
-                        'stocks_after':item.stocks_after,
-                        'stocks_before':item.stocks_before
+                        'stocks': item.stocks,
+                        'stocks_after': item.stocks_after,
+                        'stocks_before': item.stocks_before
                     },
                     type=item.type.value,
                     variant_infos=variant_info,
                     batch_infos=batch_info,
                     serial_numbers=item.serial_numbers,
                     category_infos={
-                        'id':item.category_id,
-                        'name':item.category_name,
+                        'id': item.category_id,
+                        'name': item.category_name,
                     },
                     unit_infos={
-                        'id':item.unit_id,
-                        'name':item.unit_name
+                        'id': item.unit_id,
+                        'name': item.unit_name
                     }
+                )
 
+                single_item_infos = {
+                    'total_adjustment_items': 1,
+                    'total_adjustment_increment_stocks': item.stocks if item.type.value == "INCREMENT" else 0,
+                    'total_adjustment_decrement_stocks': item.stocks if item.type.value == "DECREMENT" else 0,
+                }
+
+                adjjusted_date = date_val
+                if isinstance(adjjusted_date, str):
+                    adjjusted_date = datetime.datetime.strptime(adjjusted_date, "%Y-%m-%d").date()
+
+                read_models.append(StockMovementReadModel(
+                    stock_movement_id=single_stock_mov_adj_id,
+                    ui_id=single_ui_id,
+                    shop_id=data.shop_id,
+                    movement_type=item.type.value,
+                    adjusted_date=adjjusted_date,
+                    description=description,
+                    item_infos=single_item_infos,
+                    products=[single_product]
                 ))
 
-                item_infos['total_adjustment_items']+=1
-                if item.type.value=="INCREMENT":
-                    item_infos['total_adjustment_increment_stocks']+=item.stocks
-                elif item.type.value=="DECREMENT":
-                    item_infos['total_adjustment_decrement_stocks']+=item.stocks
+            ic("before create_bulk_adjustment")
+            await repo.create_bulk_adjustment(stock_mov_adj_models)
+            ic("after create_bulk_adjustment")
 
-
-
-            stock_mov_adj_model = StockMovementAdjustment(
-                id=stock_mov_adj_id,
-                ui_id=ui_id,
-                shop_id=data.shop_id,
-                type=adj_type,
-                description=data.description,
-                additional_infos={}
-            )
-
-            await repo.create_bulk_adjustment([stock_mov_adj_model])
+            ic("before create_bulk_items")
             await repo.create_bulk_items(stockmovadj_items_toadd)
+            ic("after create_bulk_items")
+
+            ic("before commit")
             await session.commit()
+            ic("after commit")
+            
+            # await session.commit()
 
-        adjjusted_date = date_val
-        if isinstance(adjjusted_date, str):
-            adjjusted_date = datetime.datetime.strptime(adjjusted_date, "%Y-%m-%d").date()
-        # 2. Save to Read DB
-        read_model = StockMovementReadModel(
-            stock_movement_id=stock_mov_adj_id,
-            ui_id=ui_id,
-            shop_id=data.shop_id,
-            movement_type=adj_type,
-            adjusted_date=adjjusted_date,
-            description=description,
-            item_infos=item_infos,
-            products=stockmovadj_read_items
-        )
-        
-        await StockMovementReadDbRepo.create_stock_movement(read_model)
+        ic("before read db")
 
-        return {"success": True, "id": stock_mov_adj_id}
+        for read_model in read_models:
+            ic("creating read model")
+            await StockMovementReadDbRepo.create_stock_movement(read_model)
+            ic("created read model")
+
+        ic("after read db")
+
+        return {"success": True, "ids":[]}

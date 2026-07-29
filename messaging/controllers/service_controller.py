@@ -129,7 +129,7 @@ async def service_main_controller(msg:AbstractIncomingMessage):
 
             else:
                 ic(f"Failed to process the message for entity '{entity_name}'")
-                if not is_domain_event:
+                if not is_domain_event and saga_id and saga_id != "none":
                     await saga_repo.update_status(
                         status=SagaStatusEnum.CANCELED,
                         saga_id=saga_id
@@ -144,7 +144,7 @@ async def service_main_controller(msg:AbstractIncomingMessage):
                     )
                 
 
-            if not is_domain_event:
+            if not is_domain_event and session.in_transaction():
                 await session.commit()
 
 
@@ -154,7 +154,7 @@ async def service_main_controller(msg:AbstractIncomingMessage):
         except Exception as e:
             debug_msg=serialize_exception(e)
             ic(f"An error occurred while processing the message: {e}")
-            if not is_domain_event:
+            if not is_domain_event and saga_id and saga_id != "none":
                 await saga_repo.update_status(
                         status=SagaStatusEnum.CANCELED,
                         saga_id=saga_id
@@ -167,6 +167,7 @@ async def service_main_controller(msg:AbstractIncomingMessage):
                         user_msg="Failed to process the message due to fatal error, please check the data and try again"
                     )
                 )
+            if not is_domain_event and session.in_transaction():
                 await session.commit()
 
             return False
