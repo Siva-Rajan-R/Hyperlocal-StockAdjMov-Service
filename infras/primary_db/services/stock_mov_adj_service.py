@@ -64,7 +64,7 @@ class StockMovAdjService:
                         "stocks":item['qty'],
                         "serialno_infos":item['serialno_infos'],
                         "type":"INCREMENT",
-                        'entity_name':'ADJUSTMENT'
+                        'entity_name': data.type.value if hasattr(data.type, 'value') else data.type
                     }
                 )
             elif item['type']=="DECREMENT":

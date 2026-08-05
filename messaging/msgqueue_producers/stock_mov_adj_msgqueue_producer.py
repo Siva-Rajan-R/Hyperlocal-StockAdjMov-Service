@@ -209,8 +209,8 @@ class MessagingQueueStockMovAdjProducer:
                                 id=item_stock_mov_adj_id,
                                 ui_id=item_ui_id,
                                 shop_id=shop_id,
-                                type=inc_decr_type,
-                                description=description,
+                                type=adj_type or inc_decr_type,
+                                description=description or f"Stock adjusted via {adj_type or inc_decr_type}",
                                 additional_infos={}
                             )
                         )
@@ -279,9 +279,9 @@ class MessagingQueueStockMovAdjProducer:
                                 stock_movement_id=item_stock_mov_adj_id,
                                 ui_id=item_ui_id,
                                 shop_id=shop_id,
-                                movement_type=inc_decr_type,
+                                movement_type=adj_type or inc_decr_type,
                                 adjusted_date=adjjusted_date,
-                                description=description,
+                                description=description or f"Stock adjusted via {adj_type or inc_decr_type}",
                                 item_infos=single_item_infos,
                                 products=[single_item_read_model]
                             )

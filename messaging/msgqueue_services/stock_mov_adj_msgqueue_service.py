@@ -43,8 +43,8 @@ class MessagingQueueStockMovAdjService:
                 date_val = datetime.datetime.now(datetime.timezone.utc)
 
             shop_id = data.shop_id
-            adj_type = data.type.value
-            description = data.description
+            adj_type = data.type.value if hasattr(data.type, 'value') else data.type
+            description = data.description or f"Stock adjusted via {adj_type}"
 
             item_infos = {
                 'total_adjustment_items': 0,
@@ -66,8 +66,8 @@ class MessagingQueueStockMovAdjService:
                     id=single_stock_mov_adj_id,
                     ui_id=single_ui_id,
                     shop_id=data.shop_id,
-                    type=item.type.value,
-                    description=data.description,
+                    type=adj_type,
+                    description=description,
                     additional_infos={}
                 ))
 
@@ -137,7 +137,7 @@ class MessagingQueueStockMovAdjService:
                     stock_movement_id=single_stock_mov_adj_id,
                     ui_id=single_ui_id,
                     shop_id=data.shop_id,
-                    movement_type=item.type.value,
+                    movement_type=adj_type,
                     adjusted_date=adjjusted_date,
                     description=description,
                     item_infos=single_item_infos,
