@@ -67,10 +67,10 @@ class EventCreateStockMovAdjItemSchema(BaseModel):
     product_id: str
     name: str
     ui_id: str
-    category_id:str
-    category_name:str
-    unit_id:str
-    unit_name:str
+    category_id: Optional[str] = None
+    category_name: Optional[str] = None
+    unit_id: Optional[str] = None
+    unit_name: Optional[str] = None
     variant_id: Optional[str] = None
     variant_name: Optional[str] = None
     batch_id: Optional[str] = None

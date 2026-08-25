@@ -194,11 +194,11 @@ class MessagingQueueStockMovAdjProducer:
                             stock_after = float(itm['stocks_after'])
                         else:
                             if inc_decr_type == "INCREMENT":
-                                stock_before = max(0.0, current_db_physical - stocks)
-                                stock_after = current_db_physical
+                                stock_before = current_db_physical
+                                stock_after = current_db_physical + stocks
                             else:
-                                stock_before = current_db_physical + stocks
-                                stock_after = current_db_physical
+                                stock_before = current_db_physical
+                                stock_after = max(0.0, current_db_physical - stocks)
 
                         item_stock_mov_adj_id = generate_uuid()
                         item_ui_id_res = await get_ui_id(shop_id=stock_mov_adj_data['shop_id'])
