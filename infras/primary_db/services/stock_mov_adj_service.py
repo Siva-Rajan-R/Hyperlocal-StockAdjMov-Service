@@ -1,3 +1,4 @@
+from core.utils.user_context import get_activity_log_user_info
 from models.repo_models.base_repo_model import BaseRepoModel
 from models.service_models.base_service_model import BaseServiceModel
 from sqlalchemy import select,update,delete,func,or_,and_,String,case,literal,literal_column,bindparam
@@ -152,7 +153,7 @@ class StockMovAdjService:
                     exchange_name="activity_logs.exchange",
                     payload={
                         "shop_id": data.shop_id,
-                        "user_name": "Hyperlocal-User",
+                        **get_activity_log_user_info(),
                         "service": "StockAdjustment",
                         "action": "DELETED",
                         "entity_type": "STOCK_ADJUSTMENT",
