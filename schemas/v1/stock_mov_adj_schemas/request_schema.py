@@ -25,6 +25,13 @@ class CreateStockMovAdjSchema(BaseModel):
     description:Optional[str]=None
     session_id:str
     date:date
+    added_by: Optional[str] = None
+    user_id: Optional[str] = None
+    user_name: Optional[str] = None
+    user_email: Optional[str] = None
+    user_role: Optional[str] = None
+    user_info: Optional[dict] = None
+    user_infos: Optional[dict] = None
 
 
 
@@ -89,3 +96,10 @@ class EventCreateStockMovAdjSchema(BaseModel):
     date: Optional[datetime] = None
     description: Optional[str] = None
     items: List[EventCreateStockMovAdjItemSchema]
+    added_by: Optional[str] = None
+    user_id: Optional[str] = None
+    user_name: Optional[str] = None
+    user_email: Optional[str] = None
+    user_role: Optional[str] = None
+    user_info: Optional[dict] = None
+    user_infos: Optional[dict] = None

@@ -283,7 +283,13 @@ class MessagingQueueStockMovAdjProducer:
                                 adjusted_date=adjjusted_date,
                                 description=description or f"Stock adjusted via {adj_type or inc_decr_type}",
                                 item_infos=single_item_infos,
-                                products=[single_item_read_model]
+                                products=[single_item_read_model],
+                                added_by=datas.get('added_by') or (datas.get('user_info') or {}).get('name') or 'System',
+                                user_id=datas.get('user_id'),
+                                user_name=datas.get('user_name'),
+                                user_email=datas.get('user_email'),
+                                user_role=datas.get('user_role'),
+                                user_info=datas.get('user_info')
                             )
                         )
 

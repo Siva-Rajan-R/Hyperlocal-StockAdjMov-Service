@@ -1,3 +1,4 @@
+from core.utils.user_context import current_user_ctx
 from core.utils.user_context import get_activity_log_user_info
 from models.repo_models.base_repo_model import BaseRepoModel
 from models.service_models.base_service_model import BaseServiceModel
@@ -73,7 +74,7 @@ class StockMovAdjService:
 
         stock_adj_datas={**data.model_dump(mode="json"),"items":items}
 
-        saga_data={"stock_mov_adj":stock_adj_datas}
+        saga_data={"stock_mov_adj":stock_adj_datas, "user_infos": current_user_ctx.get(), "user_info": current_user_ctx.get()}
         
         if body:
             await SagaProducer.emit(

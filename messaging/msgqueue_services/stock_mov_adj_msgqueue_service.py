@@ -46,6 +46,39 @@ class MessagingQueueStockMovAdjService:
             adj_type = data.type.value if hasattr(data.type, 'value') else data.type
             description = data.description or f"Stock adjusted via {adj_type}"
 
+            user_info = getattr(data, 'user_info', None) or (data.get('user_info') if isinstance(data, dict) else None) or getattr(data, 'user_infos', None) or (data.get('user_infos') if isinstance(data, dict) else None) or {}
+            added_by = getattr(data, 'added_by', None) or (data.get('added_by') if isinstance(data, dict) else None)
+            
+            # If not in top-level, check in items
+            if (not user_info or not added_by or added_by == "System") and data.items:
+                for itm in data.items:
+                    itm_u = getattr(itm, 'user_info', None) or (itm.get('user_info') if isinstance(itm, dict) else None) or getattr(itm, 'user_infos', None) or (itm.get('user_infos') if isinstance(itm, dict) else None)
+                    if itm_u and isinstance(itm_u, dict) and (itm_u.get('email') or itm_u.get('name') or itm_u.get('user_id')):
+                        user_info = itm_u
+                    itm_added = getattr(itm, 'added_by', None) or (itm.get('added_by') if isinstance(itm, dict) else None)
+                    if itm_added and str(itm_added).strip() not in ("System", ""):
+                        added_by = itm_added
+                    if user_info and added_by and added_by != "System":
+                        break
+
+            user_id = getattr(data, 'user_id', None) or (data.get('user_id') if isinstance(data, dict) else None) or user_info.get('user_id') or user_info.get('id')
+            user_name = getattr(data, 'user_name', None) or (data.get('user_name') if isinstance(data, dict) else None) or user_info.get('name') or user_info.get('user_name')
+            user_email = getattr(data, 'user_email', None) or (data.get('user_email') if isinstance(data, dict) else None) or user_info.get('email')
+            user_role = getattr(data, 'user_role', None) or (data.get('user_role') if isinstance(data, dict) else None) or user_info.get('role')
+
+            if not added_by or added_by == "System":
+                if not user_name and user_email:
+                    user_name = user_email.split("@")[0]
+                final_user = user_name or "System"
+                if user_email and final_user != user_email and f"- {user_email}" not in final_user:
+                    added_by = f"{final_user} - {user_email}"
+                elif user_email and not user_name:
+                    added_by = user_email
+                elif user_name:
+                    added_by = user_name
+                else:
+                    added_by = "System"
+
             item_infos = {
                 'total_adjustment_items': 0,
                 'total_adjustment_increment_stocks': 0,
@@ -68,7 +101,7 @@ class MessagingQueueStockMovAdjService:
                     shop_id=data.shop_id,
                     type=adj_type,
                     description=description,
-                    additional_infos={}
+                    additional_infos={"added_by": added_by, "user_id": user_id, "user_info": user_info}
                 ))
 
                 stockmovadj_items_toadd.append(StockMovAdjItems(
@@ -141,7 +174,13 @@ class MessagingQueueStockMovAdjService:
                     adjusted_date=adjjusted_date,
                     description=description,
                     item_infos=single_item_infos,
-                    products=[single_product]
+                    products=[single_product],
+                    added_by=added_by,
+                    user_id=user_id,
+                    user_name=user_name,
+                    user_email=user_email,
+                    user_role=user_role,
+                    user_info=user_info
                 ))
 
             ic("before create_bulk_adjustment")
