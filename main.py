@@ -23,14 +23,17 @@ async def inventory_service_lifespan(app:FastAPI):
         await check_redis_health()
         print("[STOCK MOV-ADJ SERVICE] ✅ Database & Redis initialized. Ready for operations and background workers.")
         # await redis_client.flushdb()
-        asyncio.create_task(worker())
+        app.state.worker_task = asyncio.create_task(worker())
         yield
 
     except Exception as e:
         ic(f"Error : Starting Stock Mov-Adj => {e}")
 
     finally:
-        ic("...Stoping Stock Mov-Adj...")
+        ic("...Stopping Stock Mov-Adj...")
+        if hasattr(app.state, "worker_task") and app.state.worker_task:
+            app.state.worker_task.cancel()
+            await asyncio.gather(app.state.worker_task, return_exceptions=True)
 
 debug=False
 openapi_url=None
