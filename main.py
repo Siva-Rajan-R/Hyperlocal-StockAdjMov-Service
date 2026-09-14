@@ -21,6 +21,7 @@ async def inventory_service_lifespan(app:FastAPI):
         await init_infra_db()
         await init_inventory_pg_db()
         await check_redis_health()
+        print("[STOCK MOV-ADJ SERVICE] ✅ Database & Redis initialized. Ready for operations and background workers.")
         # await redis_client.flushdb()
         asyncio.create_task(worker())
         yield

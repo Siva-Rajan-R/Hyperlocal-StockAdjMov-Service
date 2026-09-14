@@ -49,6 +49,10 @@ class MessagingQueueStockMovAdjProducer:
                 "exchange_name":exchange_name,
                 "entity_name":entity_name,
                 "service_name":service_name,
+                "reply_key":"stockmovadj.producer.routing.key",
+                "reply_exchange":"stockmovadj.producer.exchange",
+                "reply_entity_name":"create_adjustment",
+                "reply_service_name":"STOCK_MOV_ADJ",
                 "body": {
                     "shop_id":stock_mov_adj_data['shop_id'],
                     "id":list(set(product_ids))
