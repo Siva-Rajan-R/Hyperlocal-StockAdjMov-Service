@@ -278,6 +278,26 @@ class MessagingQueueStockMovAdjProducer:
                             'total_adjustment_decrement_stocks': stocks if inc_decr_type == "DECREMENT" else 0,
                         }
 
+                        u_info_val = datas.get('user_infos') or datas.get('user_info') or stock_mov_adj_data.get('user_infos') or stock_mov_adj_data.get('user_info') or {}
+                        u_added_by = datas.get('added_by') or stock_mov_adj_data.get('added_by')
+                        u_id = datas.get('user_id') or stock_mov_adj_data.get('user_id') or u_info_val.get('user_id') or u_info_val.get('id')
+                        u_name = datas.get('user_name') or stock_mov_adj_data.get('user_name') or u_info_val.get('name') or u_info_val.get('user_name')
+                        u_email = datas.get('user_email') or stock_mov_adj_data.get('user_email') or u_info_val.get('email')
+                        u_role = datas.get('user_role') or stock_mov_adj_data.get('user_role') or u_info_val.get('role')
+
+                        if not u_added_by or str(u_added_by).strip() in ("System", ""):
+                            if not u_name and u_email:
+                                u_name = u_email.split("@")[0]
+                            final_user_str = u_name or "System"
+                            if u_email and final_user_str != u_email and f"- {u_email}" not in final_user_str:
+                                u_added_by = f"{final_user_str} - {u_email}"
+                            elif u_email and not u_name:
+                                u_added_by = u_email
+                            elif u_name:
+                                u_added_by = u_name
+                            else:
+                                u_added_by = "System"
+
                         read_models.append(
                             StockMovementReadModel(
                                 stock_movement_id=item_stock_mov_adj_id,
@@ -288,12 +308,12 @@ class MessagingQueueStockMovAdjProducer:
                                 description=description or f"Stock adjusted via {adj_type or inc_decr_type}",
                                 item_infos=single_item_infos,
                                 products=[single_item_read_model],
-                                added_by=datas.get('added_by') or (datas.get('user_info') or {}).get('name') or 'System',
-                                user_id=datas.get('user_id'),
-                                user_name=datas.get('user_name'),
-                                user_email=datas.get('user_email'),
-                                user_role=datas.get('user_role'),
-                                user_info=datas.get('user_info')
+                                added_by=u_added_by,
+                                user_id=u_id,
+                                user_name=u_name,
+                                user_email=u_email,
+                                user_role=u_role,
+                                user_info=u_info_val
                             )
                         )
 
