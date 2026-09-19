@@ -86,6 +86,11 @@ class EventCreateStockMovAdjItemSchema(BaseModel):
     exp_date: Optional[datetime] = None
     serial_numbers: Optional[List[str]] = None
     type: StockMovAdjItemTypeEnums
+    entity_name: Optional[str] = None
+    entity_id: Optional[str] = None
+    order_ui_id: Optional[str] = None
+    sale_ui_id: Optional[str] = None
+    description: Optional[str] = None
     stocks_before: float
     stocks: float
     stocks_after: float
@@ -95,6 +100,10 @@ class EventCreateStockMovAdjSchema(BaseModel):
     type: StockMovAdjTypeEnums
     date: Optional[datetime] = None
     description: Optional[str] = None
+    entity_id: Optional[str] = None
+    order_ui_id: Optional[str] = None
+    sale_ui_id: Optional[str] = None
+    entity_name: Optional[str] = None
     items: List[EventCreateStockMovAdjItemSchema]
     added_by: Optional[str] = None
     user_id: Optional[str] = None

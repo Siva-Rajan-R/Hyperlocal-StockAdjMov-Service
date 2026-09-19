@@ -198,24 +198,94 @@ class MessagingQueueStockMovAdjProducer:
                             stock_after = float(itm['stocks_after'])
                         else:
                             if inc_decr_type == "INCREMENT":
-                                stock_before = current_db_physical
-                                stock_after = current_db_physical + stocks
+                                stock_before = current_db_physical - stocks
+                                stock_after = current_db_physical
                             else:
-                                stock_before = current_db_physical
-                                stock_after = max(0.0, current_db_physical - stocks)
+                                stock_before = current_db_physical + stocks
+                                stock_after = current_db_physical
 
                         item_stock_mov_adj_id = generate_uuid()
                         item_ui_id_res = await get_ui_id(shop_id=stock_mov_adj_data['shop_id'])
                         item_ui_id = f"{item_ui_id_res.get('prefix')}-{item_ui_id_res.get('current_number')}" if isinstance(item_ui_id_res, dict) else f"STM-{generate_uuid()[:6].upper()}"
+
+                        item_adj_type = itm.get('entity_name') or itm.get('type_name') or itm.get('movement_type')
+                        if not item_adj_type:
+                            if "EXCHANGE" in str(adj_type).upper():
+                                if inc_decr_type == "DECREMENT":
+                                    item_adj_type = "ONLINE_EXCHANGE" if "ONLINE" in str(adj_type).upper() else "OFFLINE_EXCHANGE"
+                                else:
+                                    item_adj_type = "ONLINE_SALES_EXCHANGE" if "ONLINE" in str(adj_type).upper() else "OFFLINE_SALES_EXCHANGE"
+                            else:
+                                item_adj_type = adj_type or inc_decr_type
+
+                        item_description = itm.get('description')
+                        if (
+                            not item_description
+                            or ("Stock increase via" in item_description and inc_decr_type == "DECREMENT")
+                            or ("Stock decrease via" in item_description and inc_decr_type == "INCREMENT")
+                            or (itm.get('ui_id') and f"({itm.get('ui_id')})" in item_description)
+                        ):
+                            entity_id_val = (
+                                itm.get('order_ui_id') or
+                                itm.get('sale_ui_id') or
+                                itm.get('entity_id') or
+                                stock_mov_adj_data.get('order_ui_id') or
+                                stock_mov_adj_data.get('sale_ui_id') or
+                                stock_mov_adj_data.get('entity_id') or
+                                datas.get('order_ui_id') or
+                                datas.get('sale_ui_id') or
+                                datas.get('entity_id')
+                            )
+                            if entity_id_val == itm.get('ui_id') or entity_id_val == db_ui_id:
+                                entity_id_val = (
+                                    stock_mov_adj_data.get('order_ui_id') or
+                                    stock_mov_adj_data.get('sale_ui_id') or
+                                    stock_mov_adj_data.get('entity_id') or
+                                    datas.get('order_ui_id') or
+                                    datas.get('sale_ui_id') or
+                                    datas.get('entity_id')
+                                )
+                                if entity_id_val == itm.get('ui_id') or entity_id_val == db_ui_id:
+                                    entity_id_val = None
+
+                            desc_entity = item_adj_type.replace("_", " ").lower() if item_adj_type else "adjustment"
+                            desc_entity = desc_entity.replace("offline ", "").replace("online ", "").strip()
+                            if inc_decr_type == "INCREMENT":
+                                action_text = "Stock increase"
+                            elif inc_decr_type == "DECREMENT":
+                                action_text = "Stock decrease"
+                            else:
+                                action_text = "Stock adjusted"
+                            item_description = f"{action_text} via {desc_entity} ({entity_id_val})" if entity_id_val else f"{action_text} via {desc_entity}"
+
+                        u_info_val = itm.get('user_infos') or itm.get('user_info') or datas.get('user_infos') or datas.get('user_info') or stock_mov_adj_data.get('user_infos') or stock_mov_adj_data.get('user_info') or {}
+                        u_added_by = itm.get('added_by') or datas.get('added_by') or stock_mov_adj_data.get('added_by')
+                        u_id = itm.get('user_id') or datas.get('user_id') or stock_mov_adj_data.get('user_id') or u_info_val.get('user_id') or u_info_val.get('id')
+                        u_name = itm.get('user_name') or datas.get('user_name') or stock_mov_adj_data.get('user_name') or u_info_val.get('name') or u_info_val.get('user_name')
+                        u_email = itm.get('user_email') or datas.get('user_email') or stock_mov_adj_data.get('user_email') or u_info_val.get('email') or u_info_val.get('user_email')
+                        u_role = itm.get('user_role') or datas.get('user_role') or stock_mov_adj_data.get('user_role') or u_info_val.get('role') or u_info_val.get('user_role')
+
+                        if not u_added_by or str(u_added_by).strip() in ("System", ""):
+                            if not u_name and u_email:
+                                u_name = u_email.split("@")[0]
+                            final_user_str = u_name or "System"
+                            if u_email and final_user_str != u_email and f"- {u_email}" not in final_user_str:
+                                u_added_by = f"{final_user_str} - {u_email}"
+                            elif u_email and not u_name:
+                                u_added_by = u_email
+                            elif u_name:
+                                u_added_by = u_name
+                            else:
+                                u_added_by = "System"
 
                         stock_mov_adj_models.append(
                             StockMovementAdjustment(
                                 id=item_stock_mov_adj_id,
                                 ui_id=item_ui_id,
                                 shop_id=shop_id,
-                                type=adj_type or inc_decr_type,
-                                description=description or f"Stock adjusted via {adj_type or inc_decr_type}",
-                                additional_infos={}
+                                type=item_adj_type,
+                                description=item_description,
+                                additional_infos={"added_by": u_added_by, "user_id": u_id, "user_info": u_info_val}
                             )
                         )
 
@@ -278,34 +348,14 @@ class MessagingQueueStockMovAdjProducer:
                             'total_adjustment_decrement_stocks': stocks if inc_decr_type == "DECREMENT" else 0,
                         }
 
-                        u_info_val = datas.get('user_infos') or datas.get('user_info') or stock_mov_adj_data.get('user_infos') or stock_mov_adj_data.get('user_info') or {}
-                        u_added_by = datas.get('added_by') or stock_mov_adj_data.get('added_by')
-                        u_id = datas.get('user_id') or stock_mov_adj_data.get('user_id') or u_info_val.get('user_id') or u_info_val.get('id')
-                        u_name = datas.get('user_name') or stock_mov_adj_data.get('user_name') or u_info_val.get('name') or u_info_val.get('user_name')
-                        u_email = datas.get('user_email') or stock_mov_adj_data.get('user_email') or u_info_val.get('email')
-                        u_role = datas.get('user_role') or stock_mov_adj_data.get('user_role') or u_info_val.get('role')
-
-                        if not u_added_by or str(u_added_by).strip() in ("System", ""):
-                            if not u_name and u_email:
-                                u_name = u_email.split("@")[0]
-                            final_user_str = u_name or "System"
-                            if u_email and final_user_str != u_email and f"- {u_email}" not in final_user_str:
-                                u_added_by = f"{final_user_str} - {u_email}"
-                            elif u_email and not u_name:
-                                u_added_by = u_email
-                            elif u_name:
-                                u_added_by = u_name
-                            else:
-                                u_added_by = "System"
-
                         read_models.append(
                             StockMovementReadModel(
                                 stock_movement_id=item_stock_mov_adj_id,
                                 ui_id=item_ui_id,
                                 shop_id=shop_id,
-                                movement_type=adj_type or inc_decr_type,
+                                movement_type=item_adj_type,
                                 adjusted_date=adjjusted_date,
-                                description=description or f"Stock adjusted via {adj_type or inc_decr_type}",
+                                description=item_description,
                                 item_infos=single_item_infos,
                                 products=[single_item_read_model],
                                 added_by=u_added_by,

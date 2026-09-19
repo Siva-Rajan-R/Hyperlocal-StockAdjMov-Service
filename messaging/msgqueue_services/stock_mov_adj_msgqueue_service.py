@@ -95,12 +95,59 @@ class MessagingQueueStockMovAdjService:
                 item_id = generate_uuid()
                 single_ui_id = ui_ids[idx]
 
+                item_val_type = item.type.value if hasattr(item.type, 'value') else item.type
+                item_entity_name = getattr(item, 'entity_name', None) or (item.get('entity_name') if isinstance(item, dict) else None)
+                if not item_entity_name:
+                    if "EXCHANGE" in str(adj_type).upper():
+                        if item_val_type == "DECREMENT":
+                            item_adj_type = "ONLINE_EXCHANGE" if "ONLINE" in str(adj_type).upper() else "OFFLINE_EXCHANGE"
+                        else:
+                            item_adj_type = "ONLINE_SALES_EXCHANGE" if "ONLINE" in str(adj_type).upper() else "OFFLINE_SALES_EXCHANGE"
+                    else:
+                        item_adj_type = adj_type
+                else:
+                    item_adj_type = item_entity_name
+
+                item_description = getattr(item, 'description', None) or (item.get('description') if isinstance(item, dict) else None)
+                if (
+                    not item_description
+                    or ("Stock increase via" in item_description and item_val_type == "DECREMENT")
+                    or ("Stock decrease via" in item_description and item_val_type == "INCREMENT")
+                    or (getattr(item, 'ui_id', None) and f"({getattr(item, 'ui_id')})" in item_description)
+                ):
+                    item_entity_id = (
+                        getattr(item, 'order_ui_id', None) or (item.get('order_ui_id') if isinstance(item, dict) else None) or
+                        getattr(item, 'sale_ui_id', None) or (item.get('sale_ui_id') if isinstance(item, dict) else None) or
+                        getattr(item, 'entity_id', None) or (item.get('entity_id') if isinstance(item, dict) else None) or
+                        getattr(data, 'order_ui_id', None) or (data.get('order_ui_id') if isinstance(data, dict) else None) or
+                        getattr(data, 'sale_ui_id', None) or (data.get('sale_ui_id') if isinstance(data, dict) else None) or
+                        getattr(data, 'entity_id', None) or (data.get('entity_id') if isinstance(data, dict) else None)
+                    )
+                    if item_entity_id == getattr(item, 'ui_id', None):
+                        item_entity_id = (
+                            getattr(data, 'order_ui_id', None) or (data.get('order_ui_id') if isinstance(data, dict) else None) or
+                            getattr(data, 'sale_ui_id', None) or (data.get('sale_ui_id') if isinstance(data, dict) else None) or
+                            getattr(data, 'entity_id', None) or (data.get('entity_id') if isinstance(data, dict) else None)
+                        )
+                        if item_entity_id == getattr(item, 'ui_id', None):
+                            item_entity_id = None
+
+                    desc_entity = item_adj_type.replace("_", " ").lower() if item_adj_type else "adjustment"
+                    desc_entity = desc_entity.replace("offline ", "").replace("online ", "").strip()
+                    if item_val_type == "INCREMENT":
+                        action_text = "Stock increase"
+                    elif item_val_type == "DECREMENT":
+                        action_text = "Stock decrease"
+                    else:
+                        action_text = "Stock adjusted"
+                    item_description = f"{action_text} via {desc_entity} ({item_entity_id})" if item_entity_id else f"{action_text} via {desc_entity}"
+
                 stock_mov_adj_models.append(StockMovementAdjustment(
                     id=single_stock_mov_adj_id,
                     ui_id=single_ui_id,
                     shop_id=data.shop_id,
-                    type=adj_type,
-                    description=description,
+                    type=item_adj_type,
+                    description=item_description,
                     additional_infos={"added_by": added_by, "user_id": user_id, "user_info": user_info}
                 ))
 
@@ -170,9 +217,9 @@ class MessagingQueueStockMovAdjService:
                     stock_movement_id=single_stock_mov_adj_id,
                     ui_id=single_ui_id,
                     shop_id=data.shop_id,
-                    movement_type=adj_type,
+                    movement_type=item_adj_type,
                     adjusted_date=adjjusted_date,
-                    description=description,
+                    description=item_description,
                     item_infos=single_item_infos,
                     products=[single_product],
                     added_by=added_by,
