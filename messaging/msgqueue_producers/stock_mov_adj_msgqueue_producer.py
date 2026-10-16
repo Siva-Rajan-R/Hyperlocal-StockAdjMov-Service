@@ -248,11 +248,11 @@ class MessagingQueueStockMovAdjProducer:
                                 if entity_id_val == itm.get('ui_id') or entity_id_val == db_ui_id:
                                     entity_id_val = None
 
-                            desc_entity = item_adj_type.replace("_", " ").lower() if item_adj_type else "adjustment"
-                            if desc_entity in ["online order", "online sales"]:
-                                desc_entity = "online sales"
+                            raw_entity = item_adj_type.replace("_", " ").lower() if item_adj_type else "adjustment"
+                            if "online" in str(item_adj_type).lower() or raw_entity in ["online order", "online sales", "online sale"]:
+                                desc_entity = "online sale"
                             else:
-                                desc_entity = desc_entity.replace("offline ", "").replace("online ", "").strip()
+                                desc_entity = raw_entity.replace("offline ", "").replace("online ", "").strip()
                             if inc_decr_type == "INCREMENT":
                                 action_text = "Stock increase"
                             elif inc_decr_type == "DECREMENT":

@@ -132,8 +132,11 @@ class MessagingQueueStockMovAdjService:
                         if item_entity_id == getattr(item, 'ui_id', None):
                             item_entity_id = None
 
-                    desc_entity = item_adj_type.replace("_", " ").lower() if item_adj_type else "adjustment"
-                    desc_entity = desc_entity.replace("offline ", "").replace("online ", "").strip()
+                    raw_entity = item_adj_type.replace("_", " ").lower() if item_adj_type else "adjustment"
+                    if "online" in str(item_adj_type).lower():
+                        desc_entity = "online sale"
+                    else:
+                        desc_entity = raw_entity.replace("offline ", "").replace("online ", "").strip()
                     if item_val_type == "INCREMENT":
                         action_text = "Stock increase"
                     elif item_val_type == "DECREMENT":
