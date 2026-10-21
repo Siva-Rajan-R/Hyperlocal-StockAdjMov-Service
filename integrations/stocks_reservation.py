@@ -16,14 +16,15 @@ load_dotenv()
 
 
 BASE_URL = f"{os.getenv('INVENTORY_SERVICE_URL', 'http://127.0.0.1:8004')}/inventories"
-TTL_MINUTES = 3
+TTL_MINUTES = 20
 
 async def create_reservation(data:CartReserveRequest):
     cart = StockAdjustmentCartCacheModel(data.session_id)
     existing_cart = await cart.get_cart()
     ic(existing_cart)
     if existing_cart is None:
-        raise HTTPException(status_code=400, detail="Invalid or expired session")
+        await cart.set_cart(items=[], ttl=TTL_MINUTES * 60)
+        existing_cart = []
     
     exc_type=data.type
     for exc in existing_cart:
