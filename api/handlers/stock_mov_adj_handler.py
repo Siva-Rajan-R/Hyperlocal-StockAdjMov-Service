@@ -77,7 +77,6 @@ class HandleStockMovAdjRequest:
         #         product_serial_numbers[product_id].add(sn)
         
         res=await self.stock_mov_adj_service_obj.create_adjustment(data=data)
-        ic(res)
 
         return SuccessResponseTypDict(
             detail=BaseResponseTypDict(
@@ -115,7 +114,6 @@ class HandleStockMovAdjRequest:
     async def get_stock_movements(self,data:GetAllStockMovAdjSchemas):
         # res=await self.stock_mov_adj_service_obj.get_movements(data=data)
         res=await StockMovementReadDbRepo.get_all(data=data)
-        ic(res)
         return SuccessResponseTypDict(
             detail=BaseResponseTypDict(
                 status_code=200,
@@ -128,7 +126,6 @@ class HandleStockMovAdjRequest:
     async def get_stock_movements_by_shop_id(self,data:GetStockMovAdjByShopIdSchema):
         # res=await self.stock_mov_adj_service_obj.get_movements_by_shop_id(data=data)
         res=await StockMovementReadDbRepo.get_by_shop_id(data=data)
-        ic(res)
         return SuccessResponseTypDict(
             detail=BaseResponseTypDict(
                 status_code=200,
@@ -142,7 +139,6 @@ class HandleStockMovAdjRequest:
     async def get_stock_movements_by_id(self,data:GetStockMovAdjByIdSchema):
         # res=await self.stock_mov_adj_service_obj.get_movement_by_id(data=data)
         res=await StockMovementReadDbRepo.get_by_id(data=data)
-        ic(res)
         return SuccessResponseTypDict(
             detail=BaseResponseTypDict(
                 status_code=200,
@@ -154,7 +150,6 @@ class HandleStockMovAdjRequest:
 
     async def get_stock_movements_by_product_id(self,data:GetStockMovAdjByProductIdSchema):
         res=await StockMovementReadDbRepo.get_by_product_id(data=data)
-        ic(res)
         return SuccessResponseTypDict(
             detail=BaseResponseTypDict(
                 status_code=200,

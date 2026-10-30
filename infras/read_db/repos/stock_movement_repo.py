@@ -65,12 +65,16 @@ class StockMovementReadDbRepo:
                 except Exception:
                     pass
 
+            limit = getattr(data, 'limit', 10) or 10
+            offset = getattr(data, 'offset', 1) or 1
+            skip = max(0, (offset - 1) * limit)
+
             cursor = STOCK_MOVEMENT_COLLECTION.find(
                 query,
                 {"_id": 0}
-            ).sort("created_at", -1)
+            ).sort("created_at", -1).skip(skip).limit(limit)
 
-            return await cursor.to_list(length=None)
+            return await cursor.to_list(length=limit)
 
         except Exception as e:
             ic(f"Error in get_all: {e}")
@@ -110,12 +114,16 @@ class StockMovementReadDbRepo:
                 except Exception:
                     pass
 
+            limit = getattr(data, 'limit', 10) or 10
+            offset = getattr(data, 'offset', 1) or 1
+            skip = max(0, (offset - 1) * limit)
+
             cursor = STOCK_MOVEMENT_COLLECTION.find(
                 query,
                 {"_id": 0}
-            ).sort("created_at", -1)
+            ).sort("created_at", -1).skip(skip).limit(limit)
 
-            return await cursor.to_list(length=None)
+            return await cursor.to_list(length=limit)
 
         except Exception as e:
             ic(f"Error in get_by_shop_id: {e}")
